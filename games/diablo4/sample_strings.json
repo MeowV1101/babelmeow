@@ -1,0 +1,55 @@
+{
+  "_comment": "Sample D4 strings for testing Typhoon 2 translation quality. Mix of categories to test glossary handling, fantasy terms, and context.",
+  "samples": [
+    {
+      "category": "quest_title",
+      "en": "Slay the Butcher",
+      "expected_th_style": "สังหารบุชเชอร์ / กำจัดเดอะบุชเชอร์"
+    },
+    {
+      "category": "npc_dialog",
+      "en": "Lilith has returned to Sanctuary. Her whispers stir the hearts of the weak.",
+      "expected_th_style": "ลิลิธได้กลับมาสู่แซงค์ชัวรีแล้ว เสียงกระซิบของนางปลุกหัวใจคนอ่อนแอ"
+    },
+    {
+      "category": "item_name",
+      "en": "Mother's Embrace",
+      "expected_th_style": "อ้อมกอดของมารดา"
+    },
+    {
+      "category": "item_affix",
+      "en": "+12 to Maximum Life",
+      "expected_th_style": "+12 พลังชีวิตสูงสุด"
+    },
+    {
+      "category": "skill_description",
+      "en": "Unleash a torrent of fire that engulfs enemies in flames.",
+      "expected_th_style": "ปลดปล่อยกระแสไฟที่กลืนกินศัตรูในเปลวเพลิง"
+    },
+    {
+      "category": "class_name",
+      "en": "Necromancer",
+      "expected_th_style": "เนโครแมนเซอร์ (จอมเวทย์มืด)"
+    },
+    {
+      "category": "location",
+      "en": "Fractured Peaks",
+      "expected_th_style": "ยอดเขาร้าวราน"
+    },
+    {
+      "category": "ui_label",
+      "en": "Press F to interact",
+      "expected_th_style": "กด F เพื่อโต้ตอบ"
+    },
+    {
+      "category": "combat_log",
+      "en": "You dealt 1,247 damage to Skeleton Warrior",
+      "expected_th_style": "คุณสร้างความเสียหาย 1,247 ต่อโครงกระดูกนักรบ"
+    },
+    {
+      "category": "lore",
+      "en": "The Nephalem are descendants of angels and demons, born of forbidden union.",
+      "expected_th_style": "เนฟาเลมคือลูกหลานของเทวดาและปีศาจ เกิดจากการรวมกันที่ต้องห้าม"
+    }
+  ]
+}

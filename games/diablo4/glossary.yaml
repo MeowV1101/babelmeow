@@ -1,0 +1,97 @@
+_meta:
+  game: Diablo IV
+  source_lang: en
+  target_lang: th
+  version: 0.1.0
+  notes: |
+    Glossary สำหรับ Diablo IV — คำเฉพาะที่ต้องแปลให้ consistent ทุกครั้ง
+    Typhoon 2 จะใช้ glossary นี้เป็น system context
+
+# ───────── Classes ─────────
+classes:
+  Barbarian: บาร์บาเรียน
+  Sorcerer: ซอร์เซอเรอร์
+  Druid: ดรูอิด
+  Rogue: โร้ก
+  Necromancer: เนโครแมนเซอร์
+  Spiritborn: สปิริตบอร์น
+
+# ───────── Major NPCs / Lore Characters ─────────
+characters:
+  Lilith: ลิลิธ
+  Inarius: อิเนเรียส
+  Mephisto: เมฟิสโต
+  Diablo: ดิอาโบล
+  Baal: บาอัล
+  Andariel: อันดาเรียล
+  Duriel: ดูเรียล
+  Tyrael: ไทเรล
+  Imperius: อิมเพอเรียส
+  Auriel: ออเรียล
+  Itherael: อิทเธอเรียล
+  Malthael: มัลธาเอล
+  Rathma: ราธมา
+
+# ───────── Locations ─────────
+locations:
+  Sanctuary: แซงค์ชัวรี
+  Heaven: สรวงสวรรค์
+  Hell: นรก
+  Burning Hells: นรกร้อนไหม้
+  Hatred's Chosen: ผู้ถูกเลือกแห่งความเกลียดชัง
+  Fractured Peaks: ยอดเขาร้าวราน
+  Scosglen: สก็อสเกลน
+  Dry Steppes: ทุ่งแห้งสเต็ปป์
+  Kehjistan: เคห์จิสถาน
+  Hawezar: ฮาเวซาร์
+  Kyovashad: คิโยวาชาด
+
+# ───────── Races / Factions ─────────
+races:
+  Nephalem: เนฟาเลม
+  Angiris Council: สภาแองกิริส
+  Prime Evils: ปีศาจตัวเอก
+  Lesser Evils: ปีศาจรอง
+  Cathedral of Light: มหาวิหารแห่งแสง
+  Knights Penitent: อัศวินผู้สำนึกบาป
+
+# ───────── Common Game Terms ─────────
+mechanics:
+  Damage: ความเสียหาย
+  Critical Strike: คริติคอลสไตรค์
+  Critical Hit: ตีคริติคอล
+  Maximum Life: พลังชีวิตสูงสุด
+  Mana: มานา
+  Stamina: สแตมิน่า
+  Cooldown: คูลดาวน์
+  Resistance: ความต้านทาน
+  Armor: เกราะ
+  Strength: พลังกาย
+  Dexterity: ความคล่องแคล่ว
+  Intelligence: ปัญญา
+  Willpower: พลังจิต
+  Vulnerable: เปราะบาง
+  Overpower: โอเวอร์พาวเวอร์
+  Lucky Hit: ลัคกี้ฮิต
+
+# ───────── Item Tiers ─────────
+tiers:
+  Common: ปกติ
+  Magic: เวทย์
+  Rare: หายาก
+  Legendary: ตำนาน
+  Unique: ยูนีค
+  Mythic: เทพปกรณัม
+  Ancestral: บรรพชน
+
+# ───────── UI Labels ─────────
+ui:
+  Inventory: คลังของ
+  Skill Tree: ผังทักษะ
+  Paragon: พารากอน
+  Codex of Power: คัมภีร์แห่งพลัง
+  Stash: คลังเก็บของ
+  Map: แผนที่
+  Quest: เควสต์
+  Bestiary: บรรพศาสตร์
+  Wardrobe: ตู้เสื้อผ้า
