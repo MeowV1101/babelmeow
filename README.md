@@ -1,0 +1,52 @@
+# 🐱 BabelMeow
+
+> Universal game translation overlay — Thai-first, open to all languages
+
+BabelMeow แปลเกมที่ไม่รองรับภาษาไทย ให้คุณเล่นได้สบาย โดย **ไม่แตะไฟล์เกม** = ไม่เสี่ยงโดน ban
+
+## ✨ Features (planned)
+
+- 🎮 รองรับหลายเกม (เริ่มจาก **Diablo IV**)
+- 🇹🇭 แปล EN → TH คุณภาพสูง ด้วย local LLM
+- 🔒 ปลอดภัย — overlay only, ไม่แตะไฟล์เกม
+- 💸 ฟรี 100% — ใช้ local AI ไม่มี API cost
+- 🔌 ใช้ Translumo / RSTGameTranslation เป็น overlay engine
+- 📦 Pre-translated dictionary — runtime ใช้ VRAM = 0
+
+## 🏗 How it works
+
+```
+Offline (one-time per game):
+  Game files → Extract strings → Translate (Typhoon 2) → SQLite
+
+Runtime (while playing):
+  Screen → OCR → Dictionary lookup → Overlay
+```
+
+## 🚀 Quick Start
+
+> 🚧 **Work in progress** — ดู [PLAN.md](docs/PLAN.md) สำหรับสถานะปัจจุบัน
+
+## 🎯 Supported Games
+
+| Game | Engine | Status |
+|---|---|---|
+| Diablo IV | Blizzard CASC | 🚧 In progress |
+| _Coming soon..._ | | |
+
+## 📚 Documentation
+
+- [Project Plan](docs/PLAN.md) — สถาปัตยกรรม, phases, timeline
+- [GitHub Setup Guide](docs/GITHUB_SETUP.md) — สอนสร้าง repo
+
+## 🤝 Contributing
+
+ยินดีต้อนรับ contributor! ดู [PLAN.md](docs/PLAN.md) ก่อนเพื่อเข้าใจ architecture
+
+## 📜 License
+
+MIT (planned)
+
+---
+
+*Made with 🐾 by กรอบ (Thai-first, world-friendly)*
