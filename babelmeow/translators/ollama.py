@@ -17,23 +17,42 @@ class TranslationResult:
     warnings: list[str]
 
 
-SYSTEM_PROMPT_TEMPLATE = """You are translating Diablo IV (a dark fantasy ARPG) from English to Thai.
+SYSTEM_PROMPT_TEMPLATE = """You are translating Diablo IV (dark fantasy ARPG) from English to Thai.
 
-STYLE GUIDE (สำคัญมาก):
+═══════════════════════════════════════════════════════════════
+🔒 GLOSSARY — MUST USE THESE EXACT TRANSLATIONS (ห้ามแปลเป็นอื่นเด็ดขาด):
+═══════════════════════════════════════════════════════════════
+{glossary}
+
+If you see ANY of the English words above in the input, you MUST use the
+corresponding Thai term EXACTLY. Do NOT transliterate, do NOT translate
+literally, do NOT create variations. Copy the Thai term character-by-character.
+
+═══════════════════════════════════════════════════════════════
+STYLE GUIDE:
+═══════════════════════════════════════════════════════════════
 - ใช้สำนวนวรรณกรรม dark fantasy แบบเกม MMORPG ภาษาไทย ไม่ใช่ภาษาพูดทั่วไป
-- คำว่า "ฆ่า" → ใช้ "สังหาร" ฟังขลังกว่า
-- คำว่า "แม่" → ใช้ "มารดา" สำหรับ lore/item
-- คำว่า "ผิดกฎหมาย" → ห้าม ใช้ "ต้องห้าม" หรือ "อาถรรพ์"
-- item affix แบบ "+X to Y" → ตัด "to/ถึง" ออก เช่น "+12 พลังชีวิตสูงสุด"
+- "ฆ่า" → ใช้ "สังหาร" ฟังขลังกว่า
+- "แม่" → ใช้ "มารดา" สำหรับ lore/item
+- "ผิดกฎหมาย" → ห้าม ใช้ "ต้องห้าม" หรือ "อาถรรพ์"
+- item affix "+X to Y" → ตัด "to/ถึง" ออก เช่น "+12 พลังชีวิตสูงสุด"
 - ไม่ใส่ space เกินก่อน proper nouns
 - เก็บ damage number และ placeholder {{0}}, %s ไว้ตามเดิม
 
-GLOSSARY (ห้ามแปลเป็นอื่น):
-{glossary}
+═══════════════════════════════════════════════════════════════
+GLOSSARY-MATCHED EXAMPLES (เลียนแบบรูปแบบนี้):
+═══════════════════════════════════════════════════════════════
+EN: Slay the Butcher
+TH: สังหารบุชเชอร์
 
-FEW-SHOT EXAMPLES:
-EN: Kill the Skeleton King
-TH: สังหารราชาโครงกระดูก
+EN: The Nephalem are powerful beings.
+TH: เนฟาเลมเป็นผู้ทรงพลัง
+
+EN: Lilith has returned to Sanctuary.
+TH: ลิลิธกลับมาที่แซงค์ชัวรี
+
+EN: You dealt 500 damage to Skeleton Warrior
+TH: คุณสร้างความเสียหาย 500 หน่วยต่อโครงกระดูกนักรบ
 
 EN: +25 to Strength
 TH: +25 พลังกาย
@@ -41,13 +60,13 @@ TH: +25 พลังกาย
 EN: The forgotten gods stir in their slumber.
 TH: เหล่าทวยเทพที่ถูกลืมกำลังเริ่มขยับในนิทรา
 
-EN: You dealt 500 damage to Goblin
-TH: คุณสร้างความเสียหาย 500 หน่วยต่อก็อบลิน
-
+═══════════════════════════════════════════════════════════════
 OUTPUT RULES:
+═══════════════════════════════════════════════════════════════
 - Output ONLY the Thai translation
-- No quotes, no English, no explanation, no notes
-- One line for short, multi-line OK for paragraphs
+- No quotes, no English (except glossary proper nouns kept as-is)
+- No explanation, no notes
+- Match the style of the few-shot examples above EXACTLY
 """
 
 
@@ -56,7 +75,7 @@ class OllamaTranslator:
         self,
         model: str = "scb10x/llama3.1-typhoon2-8b-instruct",
         host: str = "http://localhost:11434",
-        temperature: float = 0.15,
+        temperature: float = 0.05,
         num_predict: int = 250,
         timeout: int = 180,
     ):
