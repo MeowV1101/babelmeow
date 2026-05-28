@@ -8,6 +8,16 @@ from dataclasses import dataclass, field
 from .glossary import Glossary
 
 
+# Patterns we MUST preserve EXACTLY in the output (auto-restore if model strips them)
+PLACEHOLDER_PATTERNS = [
+    re.compile(r"\{[a-zA-Z_][a-zA-Z0-9_]*\}"),         # {NAME}, {LEVELAREA}, {s1}
+    re.compile(r"\{c_[a-z]+\}"),                        # {c_gold}, {c_red}
+    re.compile(r"\{/c\}"),                              # {/c} closing
+    re.compile(r"\{icon:[^}]+\}"),                      # {icon:Skull,2.5}
+    re.compile(r"%[\d]*\$?[a-z]"),                      # %s, %d, %1$s
+]
+
+
 # Known wrong transliterations → correct ones.
 # Populate this as you discover model mistakes during testing.
 KNOWN_WRONG_TRANSLITERATIONS: dict[str, str] = {
@@ -69,9 +79,18 @@ class PostProcessor:
                 result.fixes.append(f"{wrong} → {right}")
 
         # 2. Enforce glossary — for each EN term in source, ensure TH term in output
+        # If EN term still in output verbatim (untranslated), auto-replace with TH.
         for en_term, th_term in self.glossary.find_en_in(en_text):
-            if th_term not in result.corrected:
-                # Glossary term missing → flag for review
+            if th_term in result.corrected:
+                continue
+            # English term is leaked through untranslated → force replace
+            # Use word boundary on alpha chars to avoid partial replacement
+            pattern = re.compile(r"\b" + re.escape(en_term) + r"\b")
+            if pattern.search(result.corrected):
+                result.corrected = pattern.sub(th_term, result.corrected)
+                result.fixes.append(f"{en_term} → {th_term} (auto-replaced)")
+            else:
+                # Glossary term missing and no English remnant — likely paraphrased
                 result.warnings.append(
                     f"Glossary miss: '{en_term}' should yield '{th_term}'"
                 )
@@ -85,28 +104,53 @@ class PostProcessor:
                 result.warnings.append(f"Semantic trap: {name}")
                 result.needs_review = True
 
-        # 4. Sanity checks
-        # Extra leading spaces before Thai characters
-        if re.search(r"[ฯ-๛] +[ฯ-๛]", result.corrected):
-            # Try fix common case: " " between Thai words (heuristic)
-            pass  # leave for human review
+        # 4. Auto-restore placeholders that the model "translated" by mistake
+        # Strategy: if EN placeholder X is missing in output, find a foreign-looking
+        # {something} in output that isn't in EN, and swap it back.
+        en_placeholders = re.findall(r"\{[^{}]+\}", en_text)
+        for en_ph in en_placeholders:
+            if en_ph in result.corrected:
+                continue
+            # Missing — try to find a translated version to swap
+            out_placeholders = re.findall(r"\{[^{}]+\}", result.corrected)
+            for out_ph in out_placeholders:
+                if out_ph not in en_text:
+                    # Likely a translated placeholder — swap back
+                    result.corrected = result.corrected.replace(out_ph, en_ph, 1)
+                    result.fixes.append(f"{out_ph} → {en_ph} (placeholder restored)")
+                    break
 
+        # 5. Verify placeholders/tags preserved — flag remaining missing
+        for pat in PLACEHOLDER_PATTERNS:
+            src_tags = pat.findall(en_text)
+            out_tags = pat.findall(result.corrected)
+            for tag in src_tags:
+                if src_tags.count(tag) > out_tags.count(tag):
+                    result.warnings.append(f"Missing placeholder/tag: {tag}")
+                    result.needs_review = True
+
+        # 5. Sanity checks
         # Empty or too-short output
         if len(result.corrected) < 2:
             result.warnings.append("Output suspiciously short")
             result.needs_review = True
 
         # Output still contains English (likely failed translation)
-        # — but allow proper-noun retention from glossary
-        en_in_th = len(re.findall(r"[A-Za-z]{4,}", result.corrected))
+        # — but allow proper-noun retention from glossary and placeholder content
+        # Strip placeholders before checking
+        stripped = result.corrected
+        for pat in PLACEHOLDER_PATTERNS:
+            stripped = pat.sub("", stripped)
+
+        en_in_th = len(re.findall(r"[A-Za-z]{4,}", stripped))
         if en_in_th > 0:
-            # Check if all English remnants are glossary terms
             glossary_keys = set(self.glossary.terms.keys())
-            words_in_output = set(re.findall(r"[A-Za-z]+", result.corrected))
+            words_in_output = set(re.findall(r"[A-Za-z]+", stripped))
             non_glossary = words_in_output - glossary_keys
             if non_glossary:
                 result.warnings.append(
                     f"English remnant in output: {non_glossary}"
                 )
+                result.needs_review = True
 
         return result

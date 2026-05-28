@@ -39,6 +39,17 @@ STYLE GUIDE:
 - ไม่ใส่ space เกินก่อน proper nouns
 - เก็บ damage number และ placeholder {{0}}, %s ไว้ตามเดิม
 
+🔴 CRITICAL — PRESERVE EXACTLY (ห้ามแปล ห้ามแก้):
+- Color/markup tags: {{c_gold}}, {{c_red}}, {{/c}}, {{c_white}}, etc.
+- Variable placeholders: {{LEVELAREA}}, {{NAME}}, {{s1}}, {{playerName}}, {{n0}}
+- Format codes: %s, %d, %1$s, %2$d
+- Icon refs: {{icon:Skull,2.5}}, {{icon:Region_Icon_Hell,2.5}}
+- Brace expressions are ALWAYS kept as-is — copy character-by-character
+
+Example:
+EN: "{{c_gold}}Right-click to learn{{/c}} a recipe in {{LEVELAREA}}"
+TH: "{{c_gold}}คลิกขวาเพื่อเรียนรู้{{/c}}สูตรใน {{LEVELAREA}}"
+
 ═══════════════════════════════════════════════════════════════
 GLOSSARY-MATCHED EXAMPLES (เลียนแบบรูปแบบนี้):
 ═══════════════════════════════════════════════════════════════
