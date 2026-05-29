@@ -1,5 +1,9 @@
 # 🐱 BabelMeow
 
+[![CI](https://github.com/MeowV1101/babelmeow/actions/workflows/ci.yml/badge.svg)](https://github.com/MeowV1101/babelmeow/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+
 > Universal game translation overlay — Thai-first, open to all languages
 
 BabelMeow แปลเกมที่ไม่รองรับภาษาไทย ให้คุณเล่นได้สบาย โดย **ไม่แตะไฟล์เกม** = ไม่เสี่ยงโดน ban
