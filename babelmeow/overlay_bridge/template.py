@@ -22,8 +22,17 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-# Placeholders that are pure display markup — strip, don't treat as variables.
-_MARKUP_RE = re.compile(r"\{c_[^{}]*\}|\{/c\}")
+# Placeholders that are pure display markup / control — strip, NOT variables.
+# Covers D4's color tags ({c_label},{c_resource},{c_number}...), their closers
+# ({/c},{/c_label}...), and conditional control tags ({if:...},{/if},{else}).
+# These never appear in the rendered text the OCR sees.
+_MARKUP_RE = re.compile(
+    r"\{c_[^{}]*\}"      # {c_label} {c_resource} {c_number} {c_important} ...
+    r"|\{/c[^{}]*\}"     # {/c} {/c_label} {/c_resource} ...
+    r"|\{if:[^{}]*\}"    # {if:Mod.Upgrade4}
+    r"|\{/if\}"          # {/if}
+    r"|\{else\}"         # {else}
+)
 # Any placeholder.
 _PLACEHOLDER_RE = re.compile(r"\{[^{}]+\}")
 # A captured value that is "just a number/count" — keep verbatim, don't translate.
