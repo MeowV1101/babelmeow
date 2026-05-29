@@ -21,13 +21,15 @@ from pathlib import Path
 
 from rapidfuzz import fuzz, process
 
+from .template import TemplateIndex, has_content_placeholder
+
 
 @dataclass
 class MatchResult:
     th_text: str | None
     matched_en: str | None
-    method: str          # "exact" | "normalized" | "fuzzy" | "miss"
-    score: float         # 100 for exact/normalized, <100 for fuzzy, 0 for miss
+    method: str          # "exact" | "normalized" | "fuzzy" | "template" | "miss"
+    score: float         # 100 for exact/normalized/template, <100 for fuzzy, 0 for miss
 
 
 # Characters/markup to ignore when normalizing for comparison.
@@ -63,6 +65,7 @@ class Matcher:
         self._exact: dict[str, str] = {}          # en_text -> th_text
         self._norm: dict[str, str] = {}           # normalized -> en_text
         self._norm_keys: list[str] = []           # for rapidfuzz candidate list
+        self._templates = TemplateIndex()
         self._loaded_at = 0.0
         self.load()
 
@@ -82,6 +85,11 @@ class Matcher:
         for r in rows:
             en, th = r["en_text"], r["th_text"]
             exact[en] = th
+            # Entries with content placeholders ({MONSTER}, {floor}, ...) are
+            # reserved for the TEMPLATE layer — exclude from normalized/fuzzy so
+            # they can't be returned with an unfilled placeholder.
+            if has_content_placeholder(en):
+                continue
             n = normalize(en)
             if n and n not in norm:   # keep first; collisions are rare
                 norm[n] = en
@@ -90,8 +98,22 @@ class Matcher:
             self._exact = exact
             self._norm = norm
             self._norm_keys = list(norm.keys())
+            self._templates.build(exact)
             self._loaded_at = time.time()
         return len(exact)
+
+    @property
+    def template_count(self) -> int:
+        return self._templates.count
+
+    def _translate_value(self, value: str) -> str | None:
+        """Re-translate a captured template value via exact/normalized only
+        (no fuzzy/template — avoid recursion / latency)."""
+        th = self._exact.get(value) or self._exact.get(value.strip())
+        if th is not None:
+            return th
+        en = self._norm.get(normalize(value))
+        return self._exact[en] if en is not None else None
 
     @property
     def size(self) -> int:
@@ -119,7 +141,16 @@ class Matcher:
             if en is not None:
                 return MatchResult(self._exact[en], en, "normalized", 100.0)
 
-        # 3. FUZZY (skip very short — too many false positives)
+        # 3. TEMPLATE (dynamic strings: "Defeat the Butcher" -> "ปราบ บุชเชอร์")
+        # Runs BEFORE fuzzy: templates are high-precision (anchored regex with
+        # literal text), so they beat a partial fuzzy match like "Defeat the
+        # Butcher" -> "The Butcher".
+        tm = self._templates.match(text, translate_fn=self._translate_value)
+        if tm is not None:
+            th_filled, matched_en = tm
+            return MatchResult(th_filled, matched_en, "template", 100.0)
+
+        # 4. FUZZY (last resort before miss; skip very short — false positives)
         if n and len(n) >= self.fuzzy_min_len and self._norm_keys:
             # WRatio tolerates OCR errors well; the length guard below rejects its
             # substring false-positives (e.g. "...nonsense" matching "no").
