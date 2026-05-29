@@ -66,3 +66,6 @@ pip-log.txt
 ollama_debug.log
 batch_run.log
 batch_err.log
+bridge_stdout.log
+bridge_stderr.log
+bridge_requests.log
