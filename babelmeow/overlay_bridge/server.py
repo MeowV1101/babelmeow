@@ -46,8 +46,10 @@ DB_PATH = PROJECT_ROOT / "games" / "diablo4" / "cache.db"
 GLOSSARY_PATH = PROJECT_ROOT / "games" / "diablo4" / "glossary.yaml"
 REQUEST_LOG = PROJECT_ROOT / "bridge_requests.log"
 
-BRIDGE_PORT = 11435
-REAL_OLLAMA = "http://localhost:11434"
+BRIDGE_PORT = int(os.environ.get("BABELMEOW_PORT", "11435"))
+# Real Ollama for live fallback. If the bridge itself runs on 11434 (because the
+# real Ollama is stopped to free VRAM), live fallback must be off to avoid a self-loop.
+REAL_OLLAMA = os.environ.get("BABELMEOW_REAL_OLLAMA", "http://localhost:11434")
 MODEL_NAME = "babelmeow-th"          # the "model" RST will select
 # Live fallback: translate cache-misses live via real Ollama. Disable while the
 # batch is hogging Ollama (set BABELMEOW_LIVE=0). Default ON.
@@ -75,6 +77,11 @@ app = FastAPI(title="BabelMeow Bridge")
 
 _stats = {"exact": 0, "normalized": 0, "fuzzy": 0, "live": 0, "miss": 0, "requests": 0}
 
+# Memoize per-segment results — RST re-sends the same UI labels/lines constantly,
+# so the first lookup pays the cost and the rest are instant.
+_memo: dict[str, str] = {}
+_MEMO_MAX = 20000
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -96,6 +103,47 @@ def _log_request(kind: str, raw: str, source: str, result) -> None:
         pass
 
 
+RST_SEPARATOR = "##|||##"
+
+
+def parse_rst_payload(prompt: str) -> dict | None:
+    """RST v5 embeds an input JSON after 'Here is the input JSON:'.
+    Returns the parsed dict (with text_blocks) or None if not RST format."""
+    marker = "input JSON:"
+    idx = prompt.rfind(marker)
+    if idx == -1:
+        return None
+    tail = prompt[idx + len(marker):]
+    start = tail.find("{")
+    end = tail.rfind("}")
+    if start == -1 or end == -1:
+        return None
+    try:
+        return json.loads(tail[start:end + 1])
+    except Exception:
+        return None
+
+
+def handle_rst_blocks(payload: dict) -> str:
+    """Translate each text_block, preserving IDs and ##|||## separators.
+    Returns a JSON string of {"text_blocks":[{id,text}]} for RST."""
+    out_blocks = []
+    for b in payload.get("text_blocks", []):
+        bid = b.get("id", "")
+        raw_text = b.get("text", "") or ""
+        segments = raw_text.split(RST_SEPARATOR)
+        translated = []
+        for seg in segments:
+            s = seg.strip()
+            if not s:
+                translated.append(seg)  # keep empty/whitespace as-is
+                continue
+            th, _ = translate_text(s)
+            translated.append(th)
+        out_blocks.append({"id": bid, "text": RST_SEPARATOR.join(translated)})
+    return json.dumps({"text_blocks": out_blocks}, ensure_ascii=False)
+
+
 def extract_source_text(text: str) -> str:
     """Recover the raw EN text from a possibly-wrapped prompt."""
     if not text:
@@ -115,10 +163,19 @@ def extract_source_text(text: str) -> str:
 def translate_text(source: str) -> tuple[str, object]:
     """Return (thai_text, match_result). Falls back to live + cache on miss."""
     _stats["requests"] += 1
+
+    # Memo hit — instant (RST repeats the same segments constantly)
+    cached = _memo.get(source)
+    if cached is not None:
+        _stats["exact"] = _stats.get("exact", 0) + 1
+        return cached, type("R", (), {"method": "memo", "score": 100, "th_text": cached})()
+
     result = matcher.lookup(source)
 
     if result.th_text is not None:
         _stats[result.method] = _stats.get(result.method, 0) + 1
+        if len(_memo) < _MEMO_MAX:
+            _memo[source] = result.th_text
         return result.th_text, result
 
     # MISS → live fallback
@@ -142,6 +199,10 @@ def translate_text(source: str) -> tuple[str, object]:
 
     _stats["miss"] += 1
     result.method = "miss"
+    # Memoize misses too — otherwise every repeat re-runs the expensive
+    # fuzzy+template search. (Static cache during play, so this is safe.)
+    if len(_memo) < _MEMO_MAX:
+        _memo[source] = source
     return source, result  # echo EN on total miss
 
 
@@ -185,8 +246,27 @@ def _gen_response_obj(th: str) -> dict:
 @app.post("/api/generate")
 async def generate(request: Request):
     body = await request.json()
+    # DEBUG: dump the full request body so we can learn RST's exact prompt/JSON schema
+    try:
+        with open(PROJECT_ROOT / "bridge_lastreq.json", "w", encoding="utf-8") as f:
+            json.dump(body, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
     raw = body.get("prompt", "") or ""
     stream = body.get("stream", False)
+
+    # RST v5 format: prompt wraps an input JSON with text_blocks + ##|||## separators
+    payload = parse_rst_payload(raw)
+    if payload and "text_blocks" in payload:
+        th = handle_rst_blocks(payload)   # th is a JSON string for RST to parse
+        _log_request("generate-rst", raw, "[text_blocks]", type("R", (), {"method": "rst", "score": 0, "th_text": th})())
+        if stream:
+            def gen_rst():
+                yield json.dumps(_gen_response_obj(th), ensure_ascii=False) + "\n"
+            return StreamingResponse(gen_rst(), media_type="application/x-ndjson")
+        return JSONResponse(_gen_response_obj(th))
+
+    # Plain format (simple text in prompt)
     source = extract_source_text(raw)
     th, result = translate_text(source)
     _log_request("generate", raw, source, result)

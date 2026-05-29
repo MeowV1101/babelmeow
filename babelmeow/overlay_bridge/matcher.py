@@ -65,6 +65,7 @@ class Matcher:
         self._exact: dict[str, str] = {}          # en_text -> th_text
         self._norm: dict[str, str] = {}           # normalized -> en_text
         self._norm_keys: list[str] = []           # for rapidfuzz candidate list
+        self._len_buckets: dict[int, list[str]] = {}  # length -> norm keys
         self._templates = TemplateIndex()
         self._loaded_at = 0.0
         self.load()
@@ -94,13 +95,31 @@ class Matcher:
             if n and n not in norm:   # keep first; collisions are rare
                 norm[n] = en
 
+        # Bucket normalized keys by length for fast fuzzy candidate selection.
+        # Fuzzy only compares strings of similar length, so we never scan all 96k.
+        buckets: dict[int, list[str]] = {}
+        for k in norm.keys():
+            buckets.setdefault(len(k), []).append(k)
+
         with self._lock:
             self._exact = exact
             self._norm = norm
             self._norm_keys = list(norm.keys())
+            self._len_buckets = buckets
             self._templates.build(exact)
             self._loaded_at = time.time()
         return len(exact)
+
+    def _fuzzy_candidates(self, n: str) -> list[str]:
+        """Norm keys whose length is within tolerance of n (for fast fuzzy)."""
+        ln = len(n)
+        tol = max(3, int(ln * 0.30))
+        out: list[str] = []
+        for length in range(ln - tol, ln + tol + 1):
+            bucket = self._len_buckets.get(length)
+            if bucket:
+                out.extend(bucket)
+        return out
 
     @property
     def template_count(self) -> int:
@@ -151,15 +170,16 @@ class Matcher:
             return MatchResult(th_filled, matched_en, "template", 100.0)
 
         # 4. FUZZY (last resort before miss; skip very short — false positives)
-        if n and len(n) >= self.fuzzy_min_len and self._norm_keys:
+        if n and len(n) >= self.fuzzy_min_len:
+            candidates = self._fuzzy_candidates(n)
             # WRatio tolerates OCR errors well; the length guard below rejects its
             # substring false-positives (e.g. "...nonsense" matching "no").
             best = process.extractOne(
                 n,
-                self._norm_keys,
+                candidates,
                 scorer=fuzz.WRatio,
                 score_cutoff=self.fuzzy_cutoff,
-            )
+            ) if candidates else None
             if best:
                 matched_norm, score, _ = best
                 # Length guard: reject matches where the two strings differ a lot in
