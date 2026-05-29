@@ -38,9 +38,13 @@ def main():
     ).fetchone()["avg"] or 0
 
     # Recent rate (last 5 min)
+    # NOTE: updated_at is ISO format "2026-05-29T08:20:54+00:00" (T separator + TZ).
+    # SQLite datetime('now') uses a space separator, so a raw string compare breaks.
+    # Normalize with datetime(replace(...,'T',' ')) for a correct UTC comparison.
     recent = conn.execute(
         "SELECT COUNT(*) AS n FROM translations "
-        "WHERE updated_at > datetime('now', '-5 minutes')"
+        "WHERE datetime(replace(substr(updated_at,1,19),'T',' ')) "
+        "> datetime('now', '-5 minutes')"
     ).fetchone()["n"]
 
     # Per-category
@@ -69,7 +73,7 @@ def main():
         rate_per_sec = recent / 300  # 5 min = 300 sec
         eta_sec = remaining / max(rate_per_sec, 0.001)
         eta_h = eta_sec / 3600
-        print(f"║  Current rate:{rate_per_sec:>6.2f}/s                                ║")
+        print(f"║  Current rate:{rate_per_sec:>6.2f}/s  (5-worker GPU target ~2.0/s)   ║")
         print(f"║  ETA:         {eta_h:>6.1f} hours ({eta_h/24:.1f} days)              ║")
     else:
         print(f"║  Rate:        not active (no entries in last 5 min)        ║")
