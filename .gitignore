@@ -64,3 +64,5 @@ pip-log.txt
 
 # Ollama debug log (busy while serving)
 ollama_debug.log
+batch_run.log
+batch_err.log
