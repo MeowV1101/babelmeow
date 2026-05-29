@@ -368,7 +368,22 @@ def main():
     print(f"  Listening on:  http://localhost:{BRIDGE_PORT}")
     print(f"  → Point RSTGameTranslation's Ollama URL here, model '{MODEL_NAME}'")
     print("=" * 60)
-    uvicorn.run(app, host="127.0.0.1", port=BRIDGE_PORT, log_level="warning")
+
+    # Dual-stack socket: accept BOTH ::1 (localhost->IPv6) and 127.0.0.1 (IPv4).
+    # Without this, clients resolving 'localhost' to ::1 hit a ~2s timeout before
+    # falling back to IPv4 — making every new connection painfully slow.
+    import socket
+    try:
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)  # dual stack
+        sock.bind(("::", BRIDGE_PORT))
+        print("  Socket: dual-stack (IPv6 + IPv4) — localhost is fast")
+        config = uvicorn.Config(app, log_level="warning")
+        uvicorn.Server(config).run(sockets=[sock])
+    except Exception as e:
+        print(f"  Dual-stack failed ({e}); falling back to IPv4 only")
+        uvicorn.run(app, host="127.0.0.1", port=BRIDGE_PORT, log_level="warning")
 
 
 if __name__ == "__main__":
