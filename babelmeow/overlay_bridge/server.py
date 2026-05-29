@@ -54,6 +54,9 @@ MODEL_NAME = "babelmeow-th"          # the "model" RST will select
 # Live fallback: translate cache-misses live via real Ollama. Disable while the
 # batch is hogging Ollama (set BABELMEOW_LIVE=0). Default ON.
 LIVE_FALLBACK = os.environ.get("BABELMEOW_LIVE", "1") != "0"
+# Lighter 4B translate model for live fallback — saves VRAM for the game
+# (4B ~3GB vs 8B ~6GB). Override with BABELMEOW_LIVE_MODEL.
+LIVE_MODEL = os.environ.get("BABELMEOW_LIVE_MODEL", "scb10x/typhoon-translate1.5-4b")
 FUZZY_CUTOFF = 85.0
 
 # Prompt wrappers RST/other tools may wrap around the source text.
@@ -358,9 +361,16 @@ def main():
     cache = TranslationCache(DB_PATH)
     glossary = Glossary.from_yaml(GLOSSARY_PATH)
     matcher = Matcher(DB_PATH, fuzzy_cutoff=FUZZY_CUTOFF)
-    translator = OllamaTranslator(host=REAL_OLLAMA)
+    translator = OllamaTranslator(host=REAL_OLLAMA, model=LIVE_MODEL)
     processor = PostProcessor(glossary=glossary)
-    live_system_prompt = translator.build_system(glossary.to_prompt_block())
+    # LIGHT system prompt for live fallback: the full glossary prompt (~1500 tok)
+    # makes cold generation ~30s on a 4B model. A short prompt cuts prefill to a
+    # few seconds; glossary consistency is still enforced by PostProcessor after.
+    live_system_prompt = (
+        "Translate the English game text to natural Thai. "
+        "Keep numbers and {placeholders} unchanged. "
+        "Output ONLY the Thai translation, nothing else."
+    )
 
     print(f"  Cache entries: {matcher.size:,}")
     print(f"  Glossary:      {len(glossary)} terms")
