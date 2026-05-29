@@ -15,12 +15,13 @@ Ports:
 
 Run:
     python -m babelmeow.overlay_bridge.server
-    (or scripts\start_bridge.bat)
+    (or scripts/start_bridge.bat)
 """
 
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -48,7 +49,9 @@ REQUEST_LOG = PROJECT_ROOT / "bridge_requests.log"
 BRIDGE_PORT = 11435
 REAL_OLLAMA = "http://localhost:11434"
 MODEL_NAME = "babelmeow-th"          # the "model" RST will select
-LIVE_FALLBACK = True                 # translate misses live via real Ollama
+# Live fallback: translate cache-misses live via real Ollama. Disable while the
+# batch is hogging Ollama (set BABELMEOW_LIVE=0). Default ON.
+LIVE_FALLBACK = os.environ.get("BABELMEOW_LIVE", "1") != "0"
 FUZZY_CUTOFF = 85.0
 
 # Prompt wrappers RST/other tools may wrap around the source text.
