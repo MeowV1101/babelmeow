@@ -109,6 +109,9 @@ class OllamaTranslator:
             "options": {
                 "temperature": self.temperature,
                 "num_predict": self.num_predict,
+                # Cap context: our system prompt (~1500 tok) + input + output fits in 3072.
+                # Keeps KV-cache small so 4 parallel slots stay within 16 GB VRAM.
+                "num_ctx": 3072,
             },
         }
         start = time.time()

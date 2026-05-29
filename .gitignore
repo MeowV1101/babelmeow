@@ -61,3 +61,6 @@ htmlcov/
 # uv / pip
 .uv/
 pip-log.txt
+
+# Ollama debug log (busy while serving)
+ollama_debug.log
