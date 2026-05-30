@@ -69,3 +69,5 @@ batch_err.log
 bridge_stdout.log
 bridge_stderr.log
 bridge_requests.log
+upgrade.log
+upgrade_err.log
