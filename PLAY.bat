@@ -16,7 +16,7 @@ timeout /t 3 /nobreak >nul
 
 echo [2/3] Starting Ollama (GPU/Vulkan) on port 11435...
 set OLLAMA_VULKAN=1
-set OLLAMA_NUM_PARALLEL=2
+set OLLAMA_NUM_PARALLEL=4
 set OLLAMA_KEEP_ALIVE=30m
 set OLLAMA_HOST=127.0.0.1:11435
 start "" /B "%OLLAMA%" serve

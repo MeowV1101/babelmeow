@@ -24,6 +24,7 @@ import json
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -129,21 +130,51 @@ def parse_rst_payload(prompt: str) -> dict | None:
 
 def handle_rst_blocks(payload: dict) -> str:
     """Translate each text_block, preserving IDs and ##|||## separators.
+    Cache hits resolve instantly; cache misses are translated live CONCURRENTLY
+    so a screen with several new strings doesn't stack their ~1s costs serially.
     Returns a JSON string of {"text_blocks":[{id,text}]} for RST."""
-    out_blocks = []
-    for b in payload.get("text_blocks", []):
-        bid = b.get("id", "")
-        raw_text = b.get("text", "") or ""
-        segments = raw_text.split(RST_SEPARATOR)
-        translated = []
-        for seg in segments:
+    blocks = payload.get("text_blocks", [])
+    block_segments: list[list[str]] = []
+    results: dict[tuple[int, int], str] = {}
+    misses: list[tuple[int, int, str]] = []
+
+    # Phase 1 — cache lookup for every segment (instant)
+    for bi, b in enumerate(blocks):
+        segs = (b.get("text", "") or "").split(RST_SEPARATOR)
+        block_segments.append(segs)
+        for si, seg in enumerate(segs):
             s = seg.strip()
             if not s:
-                translated.append(seg)  # keep empty/whitespace as-is
+                results[(bi, si)] = seg
                 continue
-            th, _ = translate_text(s)
-            translated.append(th)
-        out_blocks.append({"id": bid, "text": RST_SEPARATOR.join(translated)})
+            th = cache_lookup(s)
+            if th is not None:
+                results[(bi, si)] = th
+            else:
+                misses.append((bi, si, s))
+
+    # Phase 2 — live-translate misses CONCURRENTLY (or echo EN if live off)
+    if misses:
+        if LIVE_FALLBACK:
+            with ThreadPoolExecutor(max_workers=4) as ex:
+                futs = {ex.submit(live_translate, s): (bi, si) for bi, si, s in misses}
+                for fut in as_completed(futs):
+                    bi, si = futs[fut]
+                    try:
+                        results[(bi, si)] = fut.result()
+                    except Exception:
+                        results[(bi, si)] = block_segments[bi][si]
+        else:
+            for bi, si, s in misses:
+                _stats["miss"] += 1
+                results[(bi, si)] = s  # echo EN
+
+    # Phase 3 — reassemble preserving separators + IDs
+    out_blocks = []
+    for bi, b in enumerate(blocks):
+        segs = block_segments[bi]
+        joined = RST_SEPARATOR.join(results.get((bi, si), segs[si]) for si in range(len(segs)))
+        out_blocks.append({"id": b.get("id", ""), "text": joined})
     return json.dumps({"text_blocks": out_blocks}, ensure_ascii=False)
 
 
@@ -163,50 +194,58 @@ def extract_source_text(text: str) -> str:
     return t
 
 
-def translate_text(source: str) -> tuple[str, object]:
-    """Return (thai_text, match_result). Falls back to live + cache on miss."""
+def cache_lookup(source: str) -> str | None:
+    """Cache-only lookup (memo + matcher: exact/normalized/template/fuzzy).
+    Returns Thai on hit, None on miss. No live LLM, no blocking."""
     _stats["requests"] += 1
-
-    # Memo hit — instant (RST repeats the same segments constantly)
     cached = _memo.get(source)
     if cached is not None:
         _stats["exact"] = _stats.get("exact", 0) + 1
-        return cached, type("R", (), {"method": "memo", "score": 100, "th_text": cached})()
-
+        return cached
     result = matcher.lookup(source)
-
     if result.th_text is not None:
         _stats[result.method] = _stats.get(result.method, 0) + 1
         if len(_memo) < _MEMO_MAX:
             _memo[source] = result.th_text
-        return result.th_text, result
+        return result.th_text
+    return None
 
-    # MISS → live fallback
+
+def live_translate(source: str) -> str:
+    """Translate a cache-miss live via the real LLM, then cache + memo it.
+    Returns Thai (or the original text on failure)."""
+    try:
+        tr = translator.translate(source, live_system_prompt)
+        pp = processor.process(source, tr.th)
+        cache.put(CacheEntry(
+            en_text=source, th_text=pp.corrected, model=tr.model,
+            category="live", needs_review=pp.needs_review,
+            elapsed_ms=int(tr.elapsed_sec * 1000),
+            warnings="; ".join(pp.warnings) if pp.warnings else None,
+        ))
+        matcher.add(source, pp.corrected)
+        if len(_memo) < _MEMO_MAX:
+            _memo[source] = pp.corrected
+        _stats["live"] += 1
+        return pp.corrected
+    except Exception as e:
+        sys.stderr.write(f"[live fallback error] {e}\n")
+        _stats["miss"] += 1
+        return source
+
+
+def translate_text(source: str) -> tuple[str, object]:
+    """Cache lookup, then live fallback on miss. (Used by the plain-text path.)"""
+    th = cache_lookup(source)
+    if th is not None:
+        return th, type("R", (), {"method": "cache", "score": 100, "th_text": th})()
     if LIVE_FALLBACK and source.strip():
-        try:
-            tr = translator.translate(source, live_system_prompt)
-            pp = processor.process(source, tr.th)
-            cache.put(CacheEntry(
-                en_text=source, th_text=pp.corrected, model=tr.model,
-                category="live", needs_review=pp.needs_review,
-                elapsed_ms=int(tr.elapsed_sec * 1000),
-                warnings="; ".join(pp.warnings) if pp.warnings else None,
-            ))
-            matcher.add(source, pp.corrected)
-            _stats["live"] += 1
-            result.method = "live"
-            result.th_text = pp.corrected
-            return pp.corrected, result
-        except Exception as e:
-            sys.stderr.write(f"[live fallback error] {e}\n")
-
+        th = live_translate(source)
+        return th, type("R", (), {"method": "live", "score": 0, "th_text": th})()
     _stats["miss"] += 1
-    result.method = "miss"
-    # Memoize misses too — otherwise every repeat re-runs the expensive
-    # fuzzy+template search. (Static cache during play, so this is safe.)
     if len(_memo) < _MEMO_MAX:
         _memo[source] = source
-    return source, result  # echo EN on total miss
+    return source, type("R", (), {"method": "miss", "score": 0, "th_text": None})()
 
 
 # ───────── Ollama-compatible endpoints ─────────
