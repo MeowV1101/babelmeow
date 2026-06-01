@@ -40,7 +40,12 @@ Runtime (while playing):
 
 ## 📚 Documentation
 
+- 📖 **[Journey / Learning Guide](docs/JOURNEY.md)** — เล่าทุกขั้นตอน + สิ่งที่ลองแล้วไม่เวิร์ก (สำหรับมือใหม่) ⭐
+- [Play Guide](docs/PLAY_GUIDE.md) — วิธีเริ่มเล่น + จูน + แก้ปัญหา
 - [Project Plan](docs/PLAN.md) — สถาปัตยกรรม, phases, timeline
+- [GPU Vulkan Fix](docs/GPU_VULKAN_FIX.md) — แก้ AMD RDNA4 รันบน CPU
+- [RST Setup](docs/RST_SETUP.md) — ตั้งค่า RSTGameTranslation
+- [Batch Operations](docs/BATCH_OPERATIONS.md) — จัดการ batch translate
 - [GitHub Setup Guide](docs/GITHUB_SETUP.md) — สอนสร้าง repo
 
 ## 🤝 Contributing
