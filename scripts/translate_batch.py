@@ -124,6 +124,7 @@ def main():
     ap.add_argument("--db", default=None)
     ap.add_argument("--glossary", default=None)
     ap.add_argument("--model", default=None, help="Ollama model (default: game config)")
+    ap.add_argument("--host", default="http://localhost:11434", help="Ollama host")
     ap.add_argument("--workers", type=int, default=4, help="Parallel workers")
     ap.add_argument("--limit", type=int, default=None, help="Only translate N strings (smoke test)")
     ap.add_argument("--report-every", type=int, default=10, help="Print progress every N")
@@ -138,7 +139,7 @@ def main():
     # Load
     cache = TranslationCache(db_path)
     glossary = Glossary.from_yaml(glossary_path)
-    translator = OllamaTranslator(model=model, target_lang=cfg.target_lang,
+    translator = OllamaTranslator(model=model, host=args.host, target_lang=cfg.target_lang,
                                   source_lang=cfg.source_lang)
     processor = PostProcessor(glossary=glossary, lang=cfg.target_lang)
     system = translator.build_system(glossary.to_prompt_block())
