@@ -51,7 +51,10 @@ LANG = os.environ.get("BABELMEOW_LANG")  # None -> game config's target_lang
 _CFG = GameConfig.load(GAME, lang=LANG)
 TARGET_LANG = _CFG.target_lang
 
-DB_PATH = _CFG.cache_db(TARGET_LANG)
+# BABELMEOW_CACHE lets the user point the overlay at any cache.db (e.g. a
+# dictionary shared by someone else) instead of the default per-game/lang one.
+_CUSTOM_CACHE = os.environ.get("BABELMEOW_CACHE")
+DB_PATH = Path(_CUSTOM_CACHE) if _CUSTOM_CACHE else _CFG.cache_db(TARGET_LANG)
 GLOSSARY_PATH = _CFG.glossary_path(TARGET_LANG)
 REQUEST_LOG = PROJECT_ROOT / "bridge_requests.log"
 

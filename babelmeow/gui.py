@@ -118,6 +118,18 @@ class App:
                          "Works with any game incl. D4.", fg="#555", wraplength=500,
                  justify="left", font=("Segoe UI", 8)).pack(anchor="w", padx=8)
 
+        # Custom dictionary file (bring a translation file from elsewhere)
+        df = ttk.LabelFrame(t, text="Dictionary file (optional)")
+        df.pack(fill="x", padx=8, pady=6)
+        self.dict_path = tk.StringVar()
+        ttk.Entry(df, textvariable=self.dict_path, width=40).grid(row=0, column=0, padx=6, pady=6)
+        tk.Button(df, text="Browse", command=self._browse_dict).grid(row=0, column=1)
+        tk.Button(df, text="Clear", command=lambda: self.dict_path.set("")).grid(row=0, column=2, padx=4)
+        tk.Label(df, text="Blank = built-in for this game/language. "
+                          ".db used directly; .json/.csv/.po imported first.",
+                 fg="#777", wraplength=480, justify="left", font=("Segoe UI", 8)).grid(
+            row=1, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 4))
+
         st = ttk.LabelFrame(t, text="Status"); st.pack(fill="x", padx=8, pady=8)
         self.lbl_ollama = tk.Label(st, text="Ollama:  ○", anchor="w"); self.lbl_ollama.pack(fill="x", padx=8)
         self.lbl_bridge = tk.Label(st, text="Bridge:  ○", anchor="w"); self.lbl_bridge.pack(fill="x", padx=8)
@@ -228,6 +240,34 @@ class App:
                                        filetypes=[("Data", "*.tsv *.csv *.json *.txt"), ("All", "*.*")])
         if p:
             self.import_path.set(p)
+
+    def _browse_dict(self):
+        p = filedialog.askopenfilename(title="Dictionary file",
+                                       filetypes=[("Dictionary", "*.db *.json *.csv *.po *.txt"), ("All", "*.*")])
+        if p:
+            self.dict_path.set(p)
+
+    def _resolve_dict(self) -> str | None:
+        """Return a cache.db path to use, importing non-.db files first.
+        None = use the default per-game/lang cache."""
+        raw = self.dict_path.get().strip()
+        if not raw:
+            return None
+        p = Path(raw)
+        if not p.exists():
+            self._log(f"[dict] not found: {p}"); return None
+        if p.suffix.lower() == ".db":
+            return str(p)
+        # import json/csv/po/keyvalue -> a sibling .db, then use it
+        out = p.with_suffix(".imported.db")
+        self._log(f"[dict] importing {p.name} -> {out.name} ...")
+        r = subprocess.run([PYTHON, "scripts/import_dict.py", "--input", str(p), "-o", str(out)],
+                           cwd=str(PROJECT_ROOT), capture_output=True, text=True,
+                           encoding="utf-8", env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+                           creationflags=NO_WINDOW)
+        last = (r.stdout or r.stderr or "").strip().splitlines()
+        self._log("  " + (last[-1] if last else "import done"))
+        return str(out) if out.exists() else None
 
     # ───────── background task runner ─────────
     def _run_bg(self, cmd, label, on_line=None, on_done=None):
@@ -351,6 +391,10 @@ class App:
         self._log(f"Start overlay: {game}/{lang} live={'on' if live else 'off'}")
         self.btn_start["state"] = "disabled"
 
+        custom_db = self._resolve_dict()
+        if custom_db:
+            self._log(f"Using dictionary: {Path(custom_db).name}")
+
         def worker():
             try:
                 if live and not self._port_up(OLLAMA_PORT):
@@ -359,6 +403,8 @@ class App:
                        "BABELMEOW_LANG": lang, "BABELMEOW_PORT": str(BRIDGE_PORT),
                        "BABELMEOW_LIVE": "1" if live else "0",
                        "BABELMEOW_REAL_OLLAMA": f"http://127.0.0.1:{OLLAMA_PORT}"}
+                if custom_db:
+                    env["BABELMEOW_CACHE"] = custom_db
                 self.bridge_proc = subprocess.Popen(
                     [PYTHON, "-m", "babelmeow.overlay_bridge.server"], cwd=str(PROJECT_ROOT),
                     env=env, creationflags=NO_WINDOW)
