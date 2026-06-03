@@ -81,6 +81,11 @@ OUTPUT RULES:
 """
 
 
+# ISO code -> human language name used in the prompt directive.
+LANG_NAMES = {"th": "Thai", "zh": "Chinese", "ja": "Japanese", "ko": "Korean",
+              "es": "Spanish", "fr": "French", "de": "German", "en": "English"}
+
+
 class OllamaTranslator:
     def __init__(
         self,
@@ -89,6 +94,7 @@ class OllamaTranslator:
         temperature: float = 0.05,
         num_predict: int = 250,
         timeout: int = 180,
+        target_lang: str = "th",
     ):
         self.model = model
         self.host = host
@@ -96,6 +102,8 @@ class OllamaTranslator:
         self.temperature = temperature
         self.num_predict = num_predict
         self.timeout = timeout
+        self.target_lang = target_lang
+        self.target_lang_name = LANG_NAMES.get(target_lang, target_lang)
 
     def build_system(self, glossary_block: str) -> str:
         return SYSTEM_PROMPT_TEMPLATE.format(glossary=glossary_block)
@@ -103,7 +111,7 @@ class OllamaTranslator:
     def translate(self, en_text: str, system: str) -> TranslationResult:
         payload = {
             "model": self.model,
-            "prompt": f"Translate to Thai:\n{en_text}",
+            "prompt": f"Translate to {self.target_lang_name}:\n{en_text}",
             "system": system,
             "stream": False,
             "options": {

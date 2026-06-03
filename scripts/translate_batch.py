@@ -33,12 +33,9 @@ if hasattr(sys.stdout, "reconfigure"):
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from babelmeow.config import GameConfig
 from babelmeow.runtime.cache import CacheEntry, TranslationCache
 from babelmeow.translators import Glossary, OllamaTranslator, PostProcessor
-
-DEFAULT_INPUT = PROJECT_ROOT / "games" / "diablo4" / "extracted" / "filtered_input.json"
-DEFAULT_DB = PROJECT_ROOT / "games" / "diablo4" / "cache.db"
-DEFAULT_GLOSSARY = PROJECT_ROOT / "games" / "diablo4" / "glossary.yaml"
 
 # Global stop flag for Ctrl-C
 _STOP = threading.Event()
@@ -121,34 +118,39 @@ def translate_one(
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", default=str(DEFAULT_INPUT))
-    ap.add_argument("--db", default=str(DEFAULT_DB))
-    ap.add_argument("--glossary", default=str(DEFAULT_GLOSSARY))
-    ap.add_argument(
-        "--model",
-        default="scb10x/llama3.1-typhoon2-8b-instruct",
-        help="Ollama model",
-    )
+    ap.add_argument("--game", default="diablo4")
+    ap.add_argument("--lang", default=None, help="target language (default: game config)")
+    ap.add_argument("--input", default=None)
+    ap.add_argument("--db", default=None)
+    ap.add_argument("--glossary", default=None)
+    ap.add_argument("--model", default=None, help="Ollama model (default: game config)")
     ap.add_argument("--workers", type=int, default=4, help="Parallel workers")
     ap.add_argument("--limit", type=int, default=None, help="Only translate N strings (smoke test)")
     ap.add_argument("--report-every", type=int, default=10, help="Print progress every N")
     args = ap.parse_args()
 
+    cfg = GameConfig.load(args.game, lang=args.lang)
+    in_path = Path(args.input) if args.input else cfg.filtered_json
+    db_path = Path(args.db) if args.db else cfg.cache_db(cfg.target_lang)
+    glossary_path = Path(args.glossary) if args.glossary else cfg.glossary_path(cfg.target_lang)
+    model = args.model or cfg.model_batch
+
     # Load
-    cache = TranslationCache(args.db)
-    glossary = Glossary.from_yaml(args.glossary)
-    translator = OllamaTranslator(model=args.model)
-    processor = PostProcessor(glossary=glossary)
+    cache = TranslationCache(db_path)
+    glossary = Glossary.from_yaml(glossary_path)
+    translator = OllamaTranslator(model=model, target_lang=cfg.target_lang)
+    processor = PostProcessor(glossary=glossary, lang=cfg.target_lang)
     system = translator.build_system(glossary.to_prompt_block())
 
     print(f"[Config]")
-    print(f"  Model:    {args.model}")
+    print(f"  Game:     {args.game}  ({cfg.source_lang} -> {cfg.target_lang})")
+    print(f"  Model:    {model}")
     print(f"  Workers:  {args.workers}")
-    print(f"  DB:       {args.db}")
+    print(f"  DB:       {db_path}")
     print(f"  Glossary: {len(glossary)} terms")
-    print(f"  Input:    {args.input}")
+    print(f"  Input:    {in_path}")
 
-    data = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    data = json.loads(in_path.read_text(encoding="utf-8"))
     all_entries = data["entries"]
     if args.limit:
         all_entries = all_entries[: args.limit]

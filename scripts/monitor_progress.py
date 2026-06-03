@@ -17,11 +17,20 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DB = PROJECT_ROOT / "games" / "diablo4" / "cache.db"
+sys.path.insert(0, str(PROJECT_ROOT))
+from babelmeow.config import GameConfig
+
 TOTAL_TARGET = 96061  # from filter_strings.py output
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--game", default="diablo4")
+    ap.add_argument("--lang", default=None)
+    args = ap.parse_args()
+    cfg = GameConfig.load(args.game, lang=args.lang)
+    DB = cfg.cache_db(cfg.target_lang)
     if not DB.exists():
         print(f"[Error] Cache DB not found at {DB}")
         sys.exit(1)

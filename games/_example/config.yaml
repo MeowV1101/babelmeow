@@ -1,0 +1,33 @@
+# Example/template game config — copy this folder to add a new game.
+# 1) Extract strings with the engine's tool (AssetStudio for Unity,
+#    FModel for Unreal, D4Analyzer for CASC, ...).
+# 2) Save as CSV/TSV/JSON, set importer.columns to match its headers.
+# 3) python scripts/import_strings.py --game <name> --input <export>
+#    python scripts/filter_strings.py --game <name>
+#    python scripts/translate_batch.py --game <name>
+game: Example Game
+engine: unity
+source_lang: en
+target_lang: th
+
+model_batch: scb10x/llama3.1-typhoon2-8b-instruct
+model_live: scb10x/typhoon-translate1.5-4b
+
+# Generic CSV importer: map your file's column headers here.
+importer:
+  format: csv
+  columns:
+    source: text        # column holding the English string
+    filename: file      # (optional) used for categorization
+    key: id             # (optional) for export/keyvalue
+
+# Filename-substring -> category (first match wins). Tune per game.
+category_patterns:
+  - [quest, quest]
+  - [item, item]
+  - [skill, skill]
+  - [ui, ui]
+  - [dialog, npc_dialog]
+
+dropped_files: []
+priority_categories: [item, quest, skill, npc_dialog, ui, lore, other]

@@ -14,10 +14,16 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-INPUT = PROJECT_ROOT / "games" / "diablo4" / "extracted" / "translations.json"
+sys.path.insert(0, str(PROJECT_ROOT))
+from babelmeow.config import GameConfig
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--game", default="diablo4")
+    args = ap.parse_args()
+    INPUT = GameConfig.load(args.game).translations_json
     data = json.loads(INPUT.read_text(encoding="utf-8"))
     entries = data["entries"]
     print(f"[Loaded] {len(entries)} entries\n")

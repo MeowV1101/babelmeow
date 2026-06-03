@@ -29,27 +29,30 @@ if hasattr(sys.stdout, "reconfigure"):
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from babelmeow.config import GameConfig
 from babelmeow.translators import Glossary, OllamaTranslator, PostProcessor
-
-DB = PROJECT_ROOT / "games" / "diablo4" / "cache.db"
-GLOSSARY = PROJECT_ROOT / "games" / "diablo4" / "glossary.yaml"
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--db", default=str(DB))
+    ap.add_argument("--game", default="diablo4")
+    ap.add_argument("--lang", default=None)
+    ap.add_argument("--db", default=None)
     ap.add_argument("--host", default="http://127.0.0.1:11435")
-    ap.add_argument("--model", default="scb10x/llama3.1-typhoon2-8b-instruct")
+    ap.add_argument("--model", default=None)
     ap.add_argument("--category", default="live", help="category to upgrade")
     ap.add_argument("--limit", type=int, default=None)
     args = ap.parse_args()
 
-    glossary = Glossary.from_yaml(GLOSSARY)
-    translator = OllamaTranslator(model=args.model, host=args.host)
-    processor = PostProcessor(glossary=glossary)
+    cfg = GameConfig.load(args.game, lang=args.lang)
+    db_path = args.db or str(cfg.cache_db(cfg.target_lang))
+    glossary = Glossary.from_yaml(cfg.glossary_path(cfg.target_lang))
+    translator = OllamaTranslator(model=args.model or cfg.model_batch, host=args.host,
+                                  target_lang=cfg.target_lang)
+    processor = PostProcessor(glossary=glossary, lang=cfg.target_lang)
     system = translator.build_system(glossary.to_prompt_block())  # full glossary prompt
 
-    conn = sqlite3.connect(args.db, timeout=30.0)
+    conn = sqlite3.connect(db_path, timeout=30.0)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
         "SELECT en_text FROM translations WHERE category=?",
@@ -59,7 +62,7 @@ def main():
     if args.limit:
         targets = targets[: args.limit]
 
-    print(f"[Upgrade] {len(targets)} '{args.category}' entries via {args.model}")
+    print(f"[Upgrade] {len(targets)} '{args.category}' entries via {translator.model}")
     if not targets:
         print("Nothing to upgrade.")
         return

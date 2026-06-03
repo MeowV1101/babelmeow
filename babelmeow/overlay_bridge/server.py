@@ -43,21 +43,29 @@ from babelmeow.runtime.cache import CacheEntry, TranslationCache
 from babelmeow.translators import Glossary, OllamaTranslator, PostProcessor
 
 # ───────── Config ─────────
-DB_PATH = PROJECT_ROOT / "games" / "diablo4" / "cache.db"
-GLOSSARY_PATH = PROJECT_ROOT / "games" / "diablo4" / "glossary.yaml"
+# Game + target language are selected via env (default: Diablo IV / Thai).
+from babelmeow.config import GameConfig
+
+GAME = os.environ.get("BABELMEOW_GAME", "diablo4")
+LANG = os.environ.get("BABELMEOW_LANG")  # None -> game config's target_lang
+_CFG = GameConfig.load(GAME, lang=LANG)
+TARGET_LANG = _CFG.target_lang
+
+DB_PATH = _CFG.cache_db(TARGET_LANG)
+GLOSSARY_PATH = _CFG.glossary_path(TARGET_LANG)
 REQUEST_LOG = PROJECT_ROOT / "bridge_requests.log"
 
 BRIDGE_PORT = int(os.environ.get("BABELMEOW_PORT", "11435"))
 # Real Ollama for live fallback. If the bridge itself runs on 11434 (because the
 # real Ollama is stopped to free VRAM), live fallback must be off to avoid a self-loop.
 REAL_OLLAMA = os.environ.get("BABELMEOW_REAL_OLLAMA", "http://localhost:11434")
-MODEL_NAME = "babelmeow-th"          # the "model" RST will select
+MODEL_NAME = f"babelmeow-{TARGET_LANG}"   # the "model" RST will select
 # Live fallback: translate cache-misses live via real Ollama. Disable while the
 # batch is hogging Ollama (set BABELMEOW_LIVE=0). Default ON.
 LIVE_FALLBACK = os.environ.get("BABELMEOW_LIVE", "1") != "0"
-# Lighter 4B translate model for live fallback — saves VRAM for the game
-# (4B ~3GB vs 8B ~6GB). Override with BABELMEOW_LIVE_MODEL.
-LIVE_MODEL = os.environ.get("BABELMEOW_LIVE_MODEL", "scb10x/typhoon-translate1.5-4b")
+# Lighter model for live fallback — saves VRAM for the game.
+# Override with BABELMEOW_LIVE_MODEL; else use the game config's live model.
+LIVE_MODEL = os.environ.get("BABELMEOW_LIVE_MODEL", _CFG.model_live)
 FUZZY_CUTOFF = 85.0
 
 # Prompt wrappers RST/other tools may wrap around the source text.
@@ -400,8 +408,8 @@ def main():
     cache = TranslationCache(DB_PATH)
     glossary = Glossary.from_yaml(GLOSSARY_PATH)
     matcher = Matcher(DB_PATH, fuzzy_cutoff=FUZZY_CUTOFF)
-    translator = OllamaTranslator(host=REAL_OLLAMA, model=LIVE_MODEL)
-    processor = PostProcessor(glossary=glossary)
+    translator = OllamaTranslator(host=REAL_OLLAMA, model=LIVE_MODEL, target_lang=TARGET_LANG)
+    processor = PostProcessor(glossary=glossary, lang=TARGET_LANG)
     # LIGHT system prompt for live fallback: the full glossary prompt (~1500 tok)
     # makes cold generation ~30s on a 4B model. A short prompt cuts prefill to a
     # few seconds; glossary consistency is still enforced by PostProcessor after.

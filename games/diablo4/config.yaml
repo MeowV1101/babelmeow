@@ -1,0 +1,66 @@
+# BabelMeow per-game config — Diablo IV
+game: Diablo IV
+engine: casc            # Blizzard CASC (extract via D4Analyzer, external tool)
+source_lang: en
+target_lang: th
+
+# Models (Ollama). Override per run with --model / BABELMEOW_LIVE_MODEL.
+model_batch: scb10x/llama3.1-typhoon2-8b-instruct   # high quality, offline batch
+model_live: scb10x/typhoon-translate1.5-4b          # light 4B, runtime fallback
+
+# Generic importer: how to read the raw export into translations.json.
+# 'd4analyzer' = the D4Analyzer "Copy Selected" TSV (SNO/FileName/Index/KeyHash/Key/Translation).
+importer:
+  format: d4analyzer
+  columns:              # for generic csv/tsv/json formats (ignored by d4analyzer preset)
+    source: Translation
+    filename: FileName
+    key: Key
+    key_hash: KeyHash
+
+# Filename-substring -> category (first match wins). Tuned for D4 file names.
+category_patterns:
+  - [achievement, achievement]
+  - [quest_objective, quest]
+  - [quest, quest]
+  - [affix, item_affix]
+  - [gem, item]
+  - [rune, item]
+  - [item, item]
+  - [power, skill]
+  - [ability, skill]
+  - [class_, class]
+  - [paladin, class]
+  - [monster, monster]
+  - [npc, npc_dialog]
+  - [dialog, npc_dialog]
+  - [loadingscreen, ui]
+  - [tutorial, ui]
+  - [menu, ui]
+  - [ui, ui]
+  - [book, lore]
+  - [journal, lore]
+  - [lore, lore]
+
+# Files that never help translation (dropped during filter).
+dropped_files:
+  - Credits
+  - CreditsX1
+  - CreditsX2
+  - FontIconTranslation
+  - ButtonLegend
+  - KeyNames
+
+# Categories kept for MVP translation.
+priority_categories:
+  - item
+  - quest
+  - skill
+  - npc_dialog
+  - item_affix
+  - ui
+  - class
+  - achievement
+  - lore
+  - monster
+  - other

@@ -64,16 +64,33 @@ class ProcessResult:
 
 
 class PostProcessor:
-    """Apply glossary enforcement and semantic checks to a raw translation."""
+    """Apply glossary enforcement and semantic checks to a raw translation.
 
-    def __init__(self, glossary: Glossary):
+    `lang` selects which language-specific rule set to use. Phase B loads
+    wrong-transliteration / semantic-trap rules from a langpack; for now `th`
+    uses the built-in constants (unchanged behavior), other langs use empty
+    rule sets (glossary + placeholder checks still apply, which are language-
+    agnostic)."""
+
+    def __init__(self, glossary: Glossary, lang: str = "th",
+                 wrong_transliterations: dict | None = None,
+                 semantic_traps: list | None = None):
         self.glossary = glossary
+        self.lang = lang
+        if wrong_transliterations is not None:
+            self.wrong = wrong_transliterations
+        else:
+            self.wrong = KNOWN_WRONG_TRANSLITERATIONS if lang == "th" else {}
+        if semantic_traps is not None:
+            self.traps = semantic_traps
+        else:
+            self.traps = SEMANTIC_TRAPS if lang == "th" else []
 
     def process(self, en_text: str, th_text: str) -> ProcessResult:
         result = ProcessResult(original=th_text, corrected=th_text)
 
         # 1. Apply known wrong transliteration fixes
-        for wrong, right in KNOWN_WRONG_TRANSLITERATIONS.items():
+        for wrong, right in self.wrong.items():
             if wrong in result.corrected:
                 result.corrected = result.corrected.replace(wrong, right)
                 result.fixes.append(f"{wrong} → {right}")
@@ -97,7 +114,7 @@ class PostProcessor:
                 result.needs_review = True
 
         # 3. Detect semantic traps
-        for en_pattern, th_pattern, name in SEMANTIC_TRAPS:
+        for en_pattern, th_pattern, name in self.traps:
             if re.search(en_pattern, en_text, re.IGNORECASE) and re.search(
                 th_pattern, result.corrected
             ):

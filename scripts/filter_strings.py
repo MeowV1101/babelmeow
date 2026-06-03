@@ -32,21 +32,8 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_IN = PROJECT_ROOT / "games" / "diablo4" / "extracted" / "translations.json"
-DEFAULT_OUT = PROJECT_ROOT / "games" / "diablo4" / "extracted" / "filtered_input.json"
-
-# Files to drop entirely (won't help in-game)
-DROPPED_FILES = {
-    "Credits", "CreditsX1", "CreditsX2",
-    "FontIconTranslation", "ButtonLegend", "KeyNames",
-}
-
-# Default high-priority categories for MVP
-DEFAULT_PRIORITY_CATEGORIES = {
-    "item", "quest", "skill", "npc_dialog", "item_affix",
-    "ui", "class", "achievement", "lore", "monster",
-    "other",  # keep "other" — many are GameOptions/AttributeDescriptions/etc.
-}
+sys.path.insert(0, str(PROJECT_ROOT))
+from babelmeow.config import GameConfig
 
 # Patterns for strings that should NOT be translated
 # (pure placeholders, format codes, identifiers)
@@ -76,18 +63,24 @@ def should_skip(text: str, min_len: int) -> bool:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", default=str(DEFAULT_IN))
-    ap.add_argument("--output", default=str(DEFAULT_OUT))
+    ap.add_argument("--game", default="diablo4")
+    ap.add_argument("--input", default=None)
+    ap.add_argument("--output", default=None)
     ap.add_argument("--min-len", type=int, default=2,
                     help="Min en_text length (default 2)")
     ap.add_argument("--categories", nargs="+", default=None,
-                    help="Override priority categories (default: all except low-value)")
+                    help="Override priority categories (default: from game config)")
     args = ap.parse_args()
 
-    categories = set(args.categories) if args.categories else DEFAULT_PRIORITY_CATEGORIES
+    cfg = GameConfig.load(args.game)
+    in_path = Path(args.input) if args.input else cfg.translations_json
+    out_path_arg = Path(args.output) if args.output else cfg.filtered_json
+    DROPPED_FILES = cfg.dropped_files
+    categories = set(args.categories) if args.categories else cfg.priority_categories
 
-    data = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    data = json.loads(in_path.read_text(encoding="utf-8"))
     raw_entries = data["entries"]
+    print(f"[Game] {args.game}  [Input] {in_path}")
     print(f"[Loaded] {len(raw_entries):,} raw entries")
 
     # Group by unique en_text
@@ -176,7 +169,7 @@ def main():
         "total_chars": sum(lengths),
     }
 
-    out_path = Path(args.output)
+    out_path = out_path_arg
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump({"summary": summary, "entries": out_entries}, f, ensure_ascii=False, indent=2)
