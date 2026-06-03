@@ -212,3 +212,13 @@ class TranslationCache:
         with self._connect() as conn:
             rows = conn.execute("SELECT en_text FROM translations").fetchall()
         return {r["en_text"] for r in rows}
+
+    def iter_all(self, order_by: str = "category, en_text") -> list[dict]:
+        """Return every row as a dict (for export). en_text/th_text are the
+        source/target text regardless of language."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"SELECT en_text, th_text, category, model, needs_review, verified "
+                f"FROM translations ORDER BY {order_by}"
+            ).fetchall()
+        return [dict(r) for r in rows]

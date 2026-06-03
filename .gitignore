@@ -71,3 +71,6 @@ bridge_stderr.log
 bridge_requests.log
 upgrade.log
 upgrade_err.log
+
+# Exported translation files (large + game-IP)
+games/*/export_*
