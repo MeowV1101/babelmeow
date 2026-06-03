@@ -138,7 +138,8 @@ def main():
     # Load
     cache = TranslationCache(db_path)
     glossary = Glossary.from_yaml(glossary_path)
-    translator = OllamaTranslator(model=model, target_lang=cfg.target_lang)
+    translator = OllamaTranslator(model=model, target_lang=cfg.target_lang,
+                                  source_lang=cfg.source_lang)
     processor = PostProcessor(glossary=glossary, lang=cfg.target_lang)
     system = translator.build_system(glossary.to_prompt_block())
 

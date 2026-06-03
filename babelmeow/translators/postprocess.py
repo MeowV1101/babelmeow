@@ -77,12 +77,19 @@ class PostProcessor:
                  semantic_traps: list | None = None):
         self.glossary = glossary
         self.lang = lang
+        # Rule precedence: explicit args > langpack yaml > built-in TH constants.
+        from ..langpack import LangPack
+        lp = LangPack.load(lang)
         if wrong_transliterations is not None:
             self.wrong = wrong_transliterations
+        elif lp.wrong_transliterations:
+            self.wrong = lp.wrong_transliterations
         else:
             self.wrong = KNOWN_WRONG_TRANSLITERATIONS if lang == "th" else {}
         if semantic_traps is not None:
             self.traps = semantic_traps
+        elif lp.semantic_traps:
+            self.traps = [tuple(t) for t in lp.semantic_traps]
         else:
             self.traps = SEMANTIC_TRAPS if lang == "th" else []
 

@@ -48,7 +48,7 @@ def main():
     db_path = args.db or str(cfg.cache_db(cfg.target_lang))
     glossary = Glossary.from_yaml(cfg.glossary_path(cfg.target_lang))
     translator = OllamaTranslator(model=args.model or cfg.model_batch, host=args.host,
-                                  target_lang=cfg.target_lang)
+                                  target_lang=cfg.target_lang, source_lang=cfg.source_lang)
     processor = PostProcessor(glossary=glossary, lang=cfg.target_lang)
     system = translator.build_system(glossary.to_prompt_block())  # full glossary prompt
 

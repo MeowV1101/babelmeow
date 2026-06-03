@@ -1,0 +1,41 @@
+name: Thai
+
+prompt_style: |
+  - ใช้สำนวนวรรณกรรม dark fantasy แบบเกม MMORPG ภาษาไทย ไม่ใช่ภาษาพูดทั่วไป
+  - "ฆ่า" → ใช้ "สังหาร" ฟังขลังกว่า
+  - "แม่" → ใช้ "มารดา" สำหรับ lore/item
+  - "ผิดกฎหมาย" → ห้าม ใช้ "ต้องห้าม" หรือ "อาถรรพ์"
+  - item affix "+X to Y" → ตัด "to/ถึง" ออก เช่น "+12 พลังชีวิตสูงสุด"
+  - ไม่ใส่ space เกินก่อน proper nouns
+
+few_shot:
+  - {en: "Slay the Butcher", tgt: "สังหารบุชเชอร์"}
+  - {en: "The Nephalem are powerful beings.", tgt: "เนฟาเลมเป็นผู้ทรงพลัง"}
+  - {en: "Lilith has returned to Sanctuary.", tgt: "ลิลิธกลับมาที่แซงค์ชัวรี"}
+  - {en: "You dealt 500 damage to Skeleton Warrior", tgt: "คุณสร้างความเสียหาย 500 หน่วยต่อโครงกระดูกนักรบ"}
+  - {en: "+25 to Strength", tgt: "+25 พลังกาย"}
+  - {en: "The forgotten gods stir in their slumber.", tgt: "เหล่าทวยเทพที่ถูกลืมกำลังเริ่มขยับในนิทรา"}
+
+# Known wrong transliterations the model sometimes produces → correct form.
+wrong_transliterations:
+  "นีเฟลีมี": "เนฟาเลม"
+  "นีเฟลีม": "เนฟาเลม"
+  "เนเฟเลม": "เนฟาเลม"
+  "นีฟาเลม": "เนฟาเลม"
+  "ลีลิธ": "ลิลิธ"
+  "ลีลิท": "ลิลิธ"
+  "แซงค์ชัวร์รี": "แซงค์ชัวรี"
+  "แซงทัวรี": "แซงค์ชัวรี"
+  "ช่างเนื้อ": "บุชเชอร์"
+  "คนเลี้ยงสัตว์": "บุชเชอร์"
+  "คนฆ่าสัตว์": "บุชเชอร์"
+  "คนชำแหละ": "บุชเชอร์"
+  "ผู้พิชิตโครงกระดูก": "โครงกระดูกนักรบ"
+  "นักรบโครงกระดูก": "โครงกระดูกนักรบ"
+
+# Source-element vs wrong-target-element confusions (flag for review).
+# [source_regex, target_regex, name]
+semantic_traps:
+  - ['\bfire\b|\bflame\b', 'กระแสน้ำ|น้ำไฟ|สายน้ำ', 'fire/water confusion']
+  - ['\blightning\b|\bthunder\b', 'เพลิง|ไฟลุก', 'lightning/fire confusion']
+  - ['\bfrost\b|\bice\b|\bcold\b', 'ร้อน|เพลิง', 'ice/heat confusion']

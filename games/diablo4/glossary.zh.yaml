@@ -1,0 +1,58 @@
+_meta:
+  game: Diablo IV
+  source_lang: en
+  target_lang: zh
+  version: 0.1.0
+  notes: |
+    Chinese (Simplified) glossary for Diablo IV — demo subset.
+    Uses official zh-CN names where known.
+
+classes:
+  Barbarian: 野蛮人
+  Sorcerer: 法师
+  Druid: 德鲁伊
+  Rogue: 游侠
+  Necromancer: 死灵法师
+  Spiritborn: 灵生者
+
+characters:
+  Lilith: 莉莉丝
+  Inarius: 伊纳留斯
+  Mephisto: 墨菲斯托
+  Diablo: 迪亚波罗
+  Andariel: 安达利尔
+  Tyrael: 泰瑞尔
+  Rathma: 拉斯玛
+
+locations:
+  Sanctuary: 圣休亚瑞
+  Hell: 地狱
+  Burning Hells: 燃烧地狱
+  Fractured Peaks: 破碎尖峰
+  Scosglen: 斯科斯格伦
+  Dry Steppes: 旱漠
+  Kehjistan: 凯姬斯坦
+  Hawezar: 哈维赞
+
+races:
+  Nephalem: 涅法雷姆
+  Prime Evils: 大魔神
+
+mechanics:
+  Damage: 伤害
+  Critical Strike: 暴击
+  Maximum Life: 最大生命值
+  Mana: 法力
+  Strength: 力量
+  Dexterity: 敏捷
+  Intelligence: 智力
+  Willpower: 意志力
+  Resistance: 抗性
+  Armor: 护甲
+
+ui:
+  Inventory: 物品栏
+  Stash: 仓库
+  Skill Tree: 技能树
+  Map: 地图
+  Quest: 任务

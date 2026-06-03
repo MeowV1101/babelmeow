@@ -4,9 +4,16 @@ engine: casc            # Blizzard CASC (extract via D4Analyzer, external tool)
 source_lang: en
 target_lang: th
 
-# Models (Ollama). Override per run with --model / BABELMEOW_LIVE_MODEL.
+# Default models (Ollama). Override per run with --model / BABELMEOW_LIVE_MODEL.
 model_batch: scb10x/llama3.1-typhoon2-8b-instruct   # high quality, offline batch
 model_live: scb10x/typhoon-translate1.5-4b          # light 4B, runtime fallback
+
+# Per-language model overrides (target_lang -> {batch, live}).
+# Thai uses Typhoon (above); Chinese uses Qwen (multilingual).
+models:
+  zh:
+    batch: qwen2.5:7b-instruct
+    live: qwen2.5:7b-instruct
 
 # Generic importer: how to read the raw export into translations.json.
 # 'd4analyzer' = the D4Analyzer "Copy Selected" TSV (SNO/FileName/Index/KeyHash/Key/Translation).

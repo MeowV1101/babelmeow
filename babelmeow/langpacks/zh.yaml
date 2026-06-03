@@ -1,0 +1,22 @@
+name: Chinese
+
+prompt_style: |
+  - 使用简体中文游戏术语，风格为黑暗奇幻 ARPG（如《暗黑破坏神》）。
+  - 译文要自然、符合玩家习惯，不要逐字直译。
+  - 保留数字与伤害数值的原格式。
+  - 专有名词使用约定译名（见词汇表）。
+
+few_shot:
+  - {en: "Slay the Butcher", tgt: "击杀屠夫"}
+  - {en: "Lilith has returned to Sanctuary.", tgt: "莉莉丝已重返圣休亚瑞。"}
+  - {en: "You dealt 500 damage to Skeleton Warrior", tgt: "你对骷髅战士造成了 500 点伤害"}
+  - {en: "+25 to Strength", tgt: "+25 力量"}
+  - {en: "Defeat the Necromancer", tgt: "击败死灵法师"}
+
+# Chinese rarely needs transliteration fixes; leave empty (add as discovered).
+wrong_transliterations: {}
+
+# Element confusions (source word vs wrong Chinese element).
+semantic_traps:
+  - ['\bfire\b|\bflame\b', '水流|冰', 'fire/water-or-ice confusion']
+  - ['\bice\b|\bfrost\b', '火焰|火', 'ice/fire confusion']

@@ -408,7 +408,8 @@ def main():
     cache = TranslationCache(DB_PATH)
     glossary = Glossary.from_yaml(GLOSSARY_PATH)
     matcher = Matcher(DB_PATH, fuzzy_cutoff=FUZZY_CUTOFF)
-    translator = OllamaTranslator(host=REAL_OLLAMA, model=LIVE_MODEL, target_lang=TARGET_LANG)
+    translator = OllamaTranslator(host=REAL_OLLAMA, model=LIVE_MODEL,
+                                  target_lang=TARGET_LANG, source_lang=_CFG.source_lang)
     processor = PostProcessor(glossary=glossary, lang=TARGET_LANG)
     # LIGHT system prompt for live fallback: the full glossary prompt (~1500 tok)
     # makes cold generation ~30s on a 4B model. A short prompt cuts prefill to a

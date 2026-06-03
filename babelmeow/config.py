@@ -59,14 +59,17 @@ class GameConfig:
         if cfg_path.exists():
             with open(cfg_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
+        target = lang or data.get("target_lang", "th")
+        # Per-language model overrides: models: {zh: {batch:..., live:...}}
+        lang_models = (data.get("models", {}) or {}).get(target, {})
         cfg = cls(
             game=game,
             root=root,
             engine=data.get("engine", "unknown"),
             source_lang=data.get("source_lang", "en"),
-            target_lang=lang or data.get("target_lang", "th"),
-            model_batch=data.get("model_batch", cls.model_batch),
-            model_live=data.get("model_live", cls.model_live),
+            target_lang=target,
+            model_batch=lang_models.get("batch", data.get("model_batch", cls.model_batch)),
+            model_live=lang_models.get("live", data.get("model_live", cls.model_live)),
             importer=data.get("importer", {"format": "tsv", "columns": {}}),
             category_patterns=[tuple(p) for p in data.get("category_patterns", _DEFAULT_CATEGORY_PATTERNS)],
             dropped_files=set(data.get("dropped_files", [])),
